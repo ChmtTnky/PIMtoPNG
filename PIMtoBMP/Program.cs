@@ -26,8 +26,7 @@ int pixel_start = data[12] + (data[13] * 256);
 Color[] palette = new Color[color_count];
 for (int i = 0; i < color_count; i++)
 {
-    // alpha values only range from 0x00-0x80, so it gets normalized to the proper 0x00-0xFF range
-    // by multiplying by 2 then removing the fractional part via type-casting
+    // alpha values only range from 0x00-0x80, so it gets normalized to the proper 0x00-0xFF range by multiplying by 2
     // 0x80 corresponds to a solid color, and it has to be reduced to 255 after the multiplication
     int alpha = ((data[palette_start + (4 * i) + 3]) * 2);
     if (alpha > 255)
