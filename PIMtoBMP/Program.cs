@@ -1,8 +1,5 @@
 ﻿using System.Drawing;
 
-const int PALETTE_START = 0x10;
-const int PIXEL_START = 0x410;
-
 // get file to convert
 Console.Write("Input the name of the PIM file (including extension): ");
 string pimfile = Console.ReadLine();
@@ -17,29 +14,39 @@ if (!File.Exists(pimfile))
 // read file data
 byte[] data = File.ReadAllBytes(pimfile);
 
+// get important values from header
 int width = data[0] + (data[1] * 256);
 int height = data[2] + (data[3] * 256);
+int bit_depth = data[4] + (data[5] * 256);
+int color_count = data[6] + (data[7] * 256);
+int palette_start = data[8] + (data[9] * 256);
+int pixel_start = data[12] + (data[13] * 256);
 
 // get color palette data
-bool valid = true;
-Color[] palette = Array.Empty<Color>();
-for (int i = 0; valid; i++)
+Color[] palette = new Color[color_count];
+for (int i = 0; i < color_count; i++)
 {
-    int alpha = ((data[PALETTE_START + (4 * i) + 3]) * 2);
+    // alpha values only range from 0x00-0x80, so it gets normalized to the proper 0x00-0xFF range
+    // by multiplying by 2 then removing the fractional part via type-casting
+    // 0x80 corresponds to a solid color, and it has to be reduced to 255 after the multiplication
+    int alpha = ((data[palette_start + (4 * i) + 3]) * 2);
     if (alpha > 255)
         alpha = 255;
-    int red = data[PALETTE_START + (4 * i)];
-    int green = data[PALETTE_START + (4 * i) + 1];
-    int blue = data[PALETTE_START + (4 * i) + 2];
+    int red = data[palette_start + (4 * i)];
+    int green = data[palette_start + (4 * i) + 1];
+    int blue = data[palette_start + (4 * i) + 2];
 
-    if ((alpha + red + green + blue == 0 && i > 0) || i > 255)
+    palette[i] = Color.FromArgb(alpha, red, green, blue);
+}
+
+// get pixel data as a bit array, rather than a byte array
+// this is needed due to variable bit depths for color index values
+bool[] bitdata = new bool[(data.Length - pixel_start) * 8];
+for (int i = pixel_start; i < data.Length; i++)
+{
+    for (int j = 0; j < 8; j++)
     {
-        valid = false;
-    }
-    else
-    {
-        Array.Resize(ref palette, palette.Length + 1);
-        palette[i] = Color.FromArgb(alpha, red, green, blue);
+        bitdata[((i - pixel_start) * 8) + j] = ((data[i] >> (7 - j)) % 2) == 1;
     }
 }
 
@@ -49,17 +56,21 @@ for (int h = 0; h < height; h++)
 {
     for (int w = 0; w < width; w++)
     {
-        int index = data[PIXEL_START + (h * width) + w];
+        int bit_index = ((h * width) + w) * bit_depth;
+        int color_index = 0;
 
-        pimbmp.SetPixel(w, h, palette[index]);
+        for (int i = 0; i < bit_depth; i++)
+            color_index += (int)(Math.Pow(2, bit_depth - i - 1) * Convert.ToInt32(bitdata[bit_index + i]));
+
+        if (bit_depth != 4)
+            pimbmp.SetPixel(w, h, palette[color_index]);
+        else
+            pimbmp.SetPixel(w + (2 * ((w + 1) % 2) - 1), h, palette[color_index]);
     }
 }
 
 // get output file name
-string newfilename = string.Empty;
-for (int i = 0; i < pimfile.Length - 4; i++)
-    newfilename += pimfile[i];
-newfilename += ".bmp";
+string newfilename = pimfile.Remove(pimfile.Length - 4) + ".bmp";
 
 // create new bmp file
 pimbmp.Save(newfilename);
