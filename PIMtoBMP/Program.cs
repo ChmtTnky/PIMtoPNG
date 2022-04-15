@@ -52,18 +52,21 @@ switch (bit_depth)
                 }
             }
 
-            for (int h = 0; h < height; h++)
+            for (int p = 0; p < width * height + Convert.ToInt32(width * height % 2); p++)
             {
-                for (int w = 0; w < width; w++)
-                {
-                    int bit_index = ((h * width) + w) * bit_depth;
-                    int color_index = 0;
+                int color_index = 0;
+                color_index += Convert.ToInt32(bitdata[(p * 4)]) * 8;
+                color_index += Convert.ToInt32(bitdata[(p * 4) + 1]) * 4;
+                color_index += Convert.ToInt32(bitdata[(p * 4) + 2]) * 2;
+                color_index += Convert.ToInt32(bitdata[(p * 4) + 3]);
 
-                    for (int i = 0; i < bit_depth; i++)
-                        color_index += (int)(Math.Pow(2, bit_depth - i - 1) * Convert.ToInt32(bitdata[bit_index + i]));
+                int adjusted_pixel_index = p + (2 * ((p + 1) % 2) - 1);
+                if (adjusted_pixel_index >= width * height)
+                    continue;
+                int pixel_width = adjusted_pixel_index % width;
+                int pixel_height = (adjusted_pixel_index - pixel_width) / width;
 
-                    pimbmp.SetPixel(w + (2 * ((w + 1) % 2) - 1), h, palette[color_index]);
-                }
+                pimbmp.SetPixel(pixel_width, pixel_height, palette[color_index]);
             }
             break;
         }
