@@ -68,7 +68,7 @@ switch (bit_depth)
                 // so, the pixel index is adjusted to account for that
                 int adjusted_pixel_index = p + (2 * ((p + 1) % 2) - 1);
                 // the second to last pixel in an image with an odd number of pixels corresponds
-                // to a pixel outside the bounds of the image, but it next one doesn't
+                // to a pixel outside the bounds of the image, but the next one doesn't
                 // to account for this, pixels beyond the limits of the image are manually ignored
                 if (adjusted_pixel_index >= width * height)
                     continue;
